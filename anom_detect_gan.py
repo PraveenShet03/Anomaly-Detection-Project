@@ -199,6 +199,8 @@ if __name__ == "__main__":
     b_ids = df["building_id"].unique()
     del df
     print(f"unique builds : {b_ids}")
+    
+    # b_ids = [1147] # or pass a custom list
 
     results_df = pd.DataFrame(
         columns=['b_id', 'use_dtw', 'alpha', 'beta', 'thresh', 'min_height', 'Precision', 'Recall', 'F1','tol'])
