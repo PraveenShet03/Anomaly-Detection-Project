@@ -116,57 +116,108 @@ def evaluate(test_df, test_out_dict, window_size, min_height, tol=24, thresh=0.5
     return TP, FN, FP
 
 def k_fold_evaluation(df, test_out_dict, window_size, min_height, tol=24, thresh=0.5, alpha=1, beta=0, only_peaks=False, k=5):
-    kf = KFold(n_splits=k)
+    """
+    Perform K-fold cross-validation on the given dataset to evaluate the model's performance.
+
+    Args:
+    - df (DataFrame): The dataset containing the time series data.
+    - test_out_dict (dict): Dictionary containing model output information for each time series.
+    - window_size (int): The window size for detecting anomalies.
+    - min_height (float): Minimum height for peak detection in KDE.
+    - tol (int): Tolerance parameter for evaluation.
+    - thresh (float): Threshold for anomaly detection.
+    - alpha (float): Weight for reconstruction error in combined score.
+    - beta (float): Weight for z-norm in combined score.
+    - only_peaks (bool): If True, only peaks are considered as anomalies.
+    - k (int): Number of folds for K-fold cross-validation.
+
+    Returns:
+    - mean_tp (float): Mean true positives across all folds.
+    - mean_fn (float): Mean false negatives across all folds.
+    - mean_fp (float): Mean false positives across all folds.
+    - all_actuals (ndarray): Array of actual anomaly labels across all folds.
+    - all_preds (ndarray): Array of predicted anomaly scores across all folds.
+    """
+    kf = KFold(n_splits=k)  # Initialize KFold with k splits
     all_tps, all_fns, all_fps = [], [], []
     all_actuals, all_preds = [], []
+
+    # Loop over each fold
     for train_index, test_index in kf.split(df):
-        train_df, test_df = df.iloc[train_index], df.iloc[test_index]
+        train_df, test_df = df.iloc[train_index], df.iloc[test_index]  # Split the data into training and testing sets
+        
+        # Evaluate the model on the test set
         TP, FN, FP = evaluate(test_df, test_out_dict, window_size, min_height, tol, thresh, alpha, beta, only_peaks)
         all_tps.append(TP)
         all_fns.append(FN)
         all_fps.append(FP)
         
-        # Collect actual and predicted values for ROC
+        # Collect actual and predicted values for ROC computation
         for id, id_df in test_df.groupby("s_no"):
             id_df.reset_index(drop=True, inplace=True)
             id_dict = test_out_dict[id]
             error = id_dict["recon_loss"]
             z_norm = id_dict["Z"]
+
+            # Convert tensor to numpy array if needed
             if type(error) == torch.Tensor:
                 error = error.detach().cpu().numpy()
             z_norm = torch.norm(z_norm.view(-1, lat_dim), dim=1).detach().cpu().numpy()
+
+            # Compute combined score based on reconstruction loss and z_norm
             combined_score = alpha * error + beta * z_norm
-            mask = combined_score > thresh
+            mask = combined_score > thresh  # Identify anomalies based on threshold
+
+            # Adjust mask for window size
             if not id_dict["window_b_included"]:
                 mask = np.pad(mask, (window_size // 2 - 1,), mode='constant', constant_values=False)
 
+            # Determine anomaly positions
             positions = np.where(mask)[0]
             if len(positions) <= 1:
                 anom = positions
             else:
+                # Use KDE to smooth anomaly positions
                 kde = gaussian_kde(positions, bw_method=0.05)
                 x = range(0, len(id_df))
                 y = kde(x)
-                y = (y - np.min(y)) / (np.max(y) - np.min(y))
+                y = (y - np.min(y)) / (np.max(y) - np.min(y))  # Normalize KDE output
 
+                # Identify peaks in KDE output
                 if only_peaks:
                     peaks, _ = find_peaks(y, height=min_height)
                 else:
                     peaks = np.where(y > min_height)[0]
 
                 anom = peaks
+
+            # Collect actual and predicted anomaly scores
             actual_anom = id_df['anomaly'].values
             actual_anom_scores = np.zeros_like(actual_anom)
             actual_anom_scores[anom] = 1
             all_actuals.extend(actual_anom)
             all_preds.extend(actual_anom_scores)
     
+    # Compute mean TP, FN, and FP across all folds and return with actual and predicted scores
     return np.mean(all_tps), np.mean(all_fns), np.mean(all_fps), np.array(all_actuals), np.array(all_preds)
 
 def plot_roc_auc(actual, pred_scores, b_id, tol):
+    """
+    Plot the ROC curve and save it as an image file.
+
+    Args:
+    - actual (ndarray): Array of actual anomaly labels.
+    - pred_scores (ndarray): Array of predicted anomaly scores.
+    - b_id (int): Building identifier for the plot title.
+    - tol (int): Tolerance parameter for evaluation.
+
+    Returns:
+    - None
+    """
     fpr, tpr, _ = roc_curve(actual, pred_scores)
     roc_auc = auc(fpr, tpr)
     
+    # Plot ROC curve
     plt.figure()
     plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
