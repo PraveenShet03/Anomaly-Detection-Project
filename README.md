@@ -1,6 +1,6 @@
 # Energy-Time-series-anomaly-detection
 
-The related paper "Generative Adversarial Network with Soft-Dynamic Time Warping and Parallel Reconstruction for Energy Time Series Anomaly Detection" (https://doi.org/10.48550/arXiv.2402.14384) got accepted at the AI4TS Workshop @ AAAI 24. This repository is just a implementation of this paper and I am not responsible to the further developments with the authors of the paper.
+The related paper "Generative Adversarial Network with Soft-Dynamic Time Warping and Parallel Reconstruction for Energy Time Series Anomaly Detection" (https://doi.org/10.48550/arXiv.2402.14384) got accepted at the AI4TS Workshop @ AAAI 24. This repository is just a implementation of this paper and I am not responsible to the previous, current and further developments with the authors of the paper.
 
 ## LEAD Dataset
 
@@ -163,7 +163,7 @@ config["recon"]["use_dtw"] = True
 
 * Only the reconstruction data pickle file is required for the final step. 
 * Run the `anom_detect_gan.py` script.
-* Note: Uncomment Line 203 and pass the list of specific buildings to be evaluated, else all the available buildings will be evaluated. 
+* Note: Uncomment Line 203 and pass the list of specific buildings to be evaluated, else all the available buildings will be evaluated which can be time-consuming.
 * Bayesian optimization is used to adjust the evaluation hyper-parameters.
 * A results CSV is created in the working directory.
 
