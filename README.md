@@ -163,7 +163,7 @@ config["recon"]["use_dtw"] = True
 
 * Only the reconstruction data pickle file is required for the final step. 
 * Run the `anom_detect_gan.py` script.
-* Note: Uncomment Line 203 and pass the list of specific buildings to be evaluated, else all the available buildings will be evaluated which can be time-consuming.
+* Note: Uncomment Line 254 and pass the list of specific buildings to be evaluated, else all the available buildings will be evaluated which can be time-consuming.
 * Bayesian optimization is used to adjust the evaluation hyper-parameters.
 * A results CSV is created in the working directory.
 
